@@ -4,34 +4,34 @@
 struct Room
 {
     int room_no;
-    int capacity;
-    bool has_submeter;
-    bool is_active;
+    int capacity;      // max tenants in the room
+    bool has_submeter; // true if the room has its own submeter
+    bool is_active;    // false = room removed/closed
 };
 struct Tenant
 {
-    int tenant_id;
-    char name[50];
-    int room_no;
-    int move_in_day;
-    int move_out_day;
-    bool is_active;
+    int tenant_id;    // unique ID per tenant
+    char name[50];    // up to 49 characters
+    int room_no;      // room the tenant is staying in
+    int move_in_day;  // day of the month they moved in
+    int move_out_day; // 0 = still staying
+    bool is_active;   // false = tenant removed
 };
 struct GuestLog
 {
     int room_no;
     int month;
     int year;
-    int guest_nights;
+    int guest_nights; // total overnight guest stays in this room for the month
 };
 struct MonthlyBill
 {
     int month;
     int year;
-    int days_in_month;
-    double total_kwh;
-    double total_water_amount;
-    double fixed_charge_amount;
+    int days_in_month;          // 28-31
+    double total_kwh;           // whole-house electricity usage
+    double total_water_amount;  // water bill in pesos
+    double fixed_charge_amount; // shared fixed charges (e.g. pump)
 };
 
 int main(void)
