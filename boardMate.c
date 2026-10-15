@@ -24,6 +24,16 @@ struct GuestLog
     int year;
     int guest_nights;
 };
+struct MonthlyBill
+{
+    int month;
+    int year;
+    int days_in_month;
+    double total_kwh;
+    double total_water_amount;
+    double fixed_charge_amount;
+};
+
 int main(void)
 {
     return 0;
