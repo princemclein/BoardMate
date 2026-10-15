@@ -17,6 +17,13 @@ struct Tenant
     int move_out_day;
     bool is_active;
 };
+struct GuestLog
+{
+    int room_no;
+    int month;
+    int year;
+    int guest_nights;
+};
 int main(void)
 {
     return 0;
