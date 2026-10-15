@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdbool.h>
+
 struct Room
 {
     int room_no;
