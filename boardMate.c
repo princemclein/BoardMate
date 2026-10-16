@@ -70,13 +70,20 @@ int main(void)
     if (scanf("%d", &startRoom) != 1 || startRoom <= 0) {
         printf("Invalid starting room number!\n");
         free(rooms);
+        return 1;
     }
 
     // Generate room numbers automatically
     for (int i = 0; i < roomCount; i++) {
         rooms[i].room_no = startRoom + i;
 
-        printf("Room %d registered. \n", rooms[i].room_no);
+        printf("Enter capacity for room %d: ", rooms[i].room_no);
+        
+        if (scanf("%d", &rooms[i].capacity) != 1 || rooms[i].capacity <= 0) {
+            printf("Invalid room capacity!\n");
+            free(rooms);
+            return 1;
+        }
     }
 
         return 0;
