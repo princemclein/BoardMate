@@ -14,7 +14,7 @@ struct Tenant
     char name[50];    // up to 49 characters
     int room_no;      // room the tenant is staying in
     int move_in_day;  // day of the month they moved in
-    int move_out_day; // 0 = still staying
+    int move_out_day; // 0 = still staying  
     bool is_active;   // false = tenant removed
 };
 struct GuestLog
@@ -36,5 +36,14 @@ struct MonthlyBill
 
 int main(void)
 {
+    struct Room r1;
+    r1.room_no = 101;
+    r1.capacity = 5;
+    r1.has_submeter = true;
+    r1.is_active = true;
+
+    printf("Room Number: %d\n", r1.room_no);
+    printf("Capacity: %d", r1.capacity);
+
     return 0;
 }
