@@ -43,6 +43,9 @@ int main(void)
     // Stores the number of rooms entered by the landlord
     int roomCount;
 
+    // stores the first room number
+    int startRoom;
+
     // Ask the landlord how many rooms they have
     printf("How many rooms do you have? ");
     scanf("%d", &roomCount);
@@ -56,6 +59,25 @@ int main(void)
     // Allocate enough memory for the requested number of rooms
     rooms = malloc(roomCount * sizeof(struct Room));
 
+    if (rooms == NULL) {
+        printf("Memory allocation failed");
+        return 1;
+    }
+    
+    // Ask the landlord for the starting room number
+    printf("Enter starting room number: ");
+    
+    if (scanf("%d", &startRoom) != 1 || startRoom <= 0) {
+        printf("Invalid starting room number!\n");
+        free(rooms);
+    }
 
-    return 0;
+    // Generate room numbers automatically
+    for (int i = 0; i < roomCount; i++) {
+        rooms[i].room_no = startRoom + i;
+
+        printf("Room %d registered. \n", rooms[i].room_no);
+    }
+
+        return 0;
 }
