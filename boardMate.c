@@ -48,5 +48,8 @@ int main(void)
         return 1;
     }
 
+    rooms = malloc(roomCount * sizeof(struct Room));
+
+
     return 0;
 }
