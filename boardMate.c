@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdbool.h>
+#include <stdlib.h>
 
 struct Room
 {
@@ -36,14 +37,16 @@ struct MonthlyBill
 
 int main(void)
 {
-    struct Room r1;
-    r1.room_no = 101;
-    r1.capacity = 5;
-    r1.has_submeter = true;
-    r1.is_active = true;
+    struct Room *rooms;
+    int roomCount;
 
-    printf("Room Number: %d\n", r1.room_no);
-    printf("Capacity: %d", r1.capacity);
+    printf("How many rooms do you have? ");
+    scanf("%d", &roomCount);
+
+    if (roomCount <= 0) {
+        printf("Invalid Room Count!");
+        return 1;
+    }
 
     return 0;
 }
