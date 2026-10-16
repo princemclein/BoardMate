@@ -36,18 +36,24 @@ struct MonthlyBill
 };
 
 int main(void)
-{
-    struct Room *rooms;
+{ 
+    // Pointer that will reference dynamically allocated room records
+    struct Room *rooms; 
+    
+    // Stores the number of rooms entered by the landlord
     int roomCount;
 
+    // Ask the landlord how many rooms they have
     printf("How many rooms do you have? ");
     scanf("%d", &roomCount);
-
+    
+    // Reject zero or negative room counts
     if (roomCount <= 0) {
         printf("Invalid Room Count!");
         return 1;
     }
-
+    
+    // Allocate enough memory for the requested number of rooms
     rooms = malloc(roomCount * sizeof(struct Room));
 
 
