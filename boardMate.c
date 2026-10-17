@@ -73,7 +73,7 @@ int main(void)
         return 1;
     }
 
-    // Generate room numbers automatically
+    // Generate room numbers automatically after adding the starting room number
     for (int i = 0; i < roomCount; i++) {
         rooms[i].room_no = startRoom + i;
 
