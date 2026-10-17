@@ -4,7 +4,7 @@
 
 struct Room
 {
-    int room_no;
+    int room_no;        // Room Number
     int capacity;      // max tenants in the room
     bool has_submeter; // true if the room has its own submeter
     bool is_active;    // false = room removed/closed
