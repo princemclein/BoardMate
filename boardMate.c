@@ -55,6 +55,26 @@ void clearInputBuffer(void)
     }
 }
 
+/* Check if a tenant is currently staying */
+bool isCurrentlyStaying(struct Tenant tenant, int currentDay)
+{
+    // Tenant has not moved in yet
+    if (currentDay < tenant.move_in_day)
+    {
+        return false;
+    }
+
+    // Tenant has already moved out
+    if (tenant.move_out_day != 0 &&
+        currentDay > tenant.move_out_day)
+    {
+        return false;
+    }
+
+    // Tenant is currently staying
+    return true;
+}
+
 int main(void)
 {
     struct Room *rooms;
@@ -64,6 +84,18 @@ int main(void)
     int tenantCount;
     int startRoom;
     int submeterChoice;
+    int currentDay;
+
+    // Get the current day for occupancy checking
+    printf("Enter current day of the month (1-31): ");
+
+    if (scanf("%d", &currentDay) != 1 ||
+        currentDay < 1 || currentDay > 31)
+    {
+        printf("Invalid current day!\n");
+        return 1;
+    }
+    clearInputBuffer();
 
     // Start room registration
     printf("=== BoardMate: Room Registration ===\n\n");
@@ -258,16 +290,16 @@ int main(void)
                 continue;
             }
 
-            // Check capacity for tenants who are still staying
+            // Check capacity for tenants who are currently staying
             currentOccupants = 0;
 
-            if (tenants[i].move_out_day == 0)
+            if (isCurrentlyStaying(tenants[i], currentDay))
             {
                 for (int j = 0; j < i; j++)
                 {
                     if (tenants[j].room_no == roomChoice &&
                         tenants[j].is_active &&
-                        tenants[j].move_out_day == 0)
+                        isCurrentlyStaying(tenants[j], currentDay))
                     {
                         currentOccupants++;
                     }
@@ -289,18 +321,38 @@ int main(void)
 
     // Display all registered tenants
     printf("\n=== Registered Tenants ===\n");
-    printf("%-8s %-25s %-10s %-10s %-10s %-10s\n",
-           "ID", "Name", "Room", "Move In", "Move Out", "Status");
+    printf("%-8s %-25s %-10s %-10s %-10s %-20s\n",
+           "ID", "Name", "Room", "Move In", "Move Out", "Occupancy");
 
     for (int i = 0; i < tenantCount; i++)
     {
-        printf("%-8d %-25.25s %-10d %-10d %-10d %-10s\n",
+        // Determine occupancy using the current day
+        const char *occupancy;
+
+        if (!tenants[i].is_active)
+        {
+            occupancy = "Inactive Record";
+        }
+        else if (isCurrentlyStaying(tenants[i], currentDay))
+        {
+            occupancy = "Staying";
+        }
+        else if (currentDay < tenants[i].move_in_day)
+        {
+            occupancy = "Not Moved In";
+        }
+        else
+        {
+            occupancy = "Moved Out";
+        }
+
+        printf("%-8d %-25.25s %-10d %-10d %-10d %-20s\n",
                tenants[i].tenant_id,
                tenants[i].name,
                tenants[i].room_no,
                tenants[i].move_in_day,
                tenants[i].move_out_day,
-               tenants[i].is_active ? "Active" : "Inactive");
+               occupancy);
     }
 
     // Release allocated memory
