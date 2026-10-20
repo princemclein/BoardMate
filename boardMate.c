@@ -1,4 +1,3 @@
-
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -20,8 +19,17 @@ struct Tenant
     int tenant_id;
     char name[50];
     int room_no;
+
+    // Tenant move-in date
     int move_in_day;
+    int move_in_month;
+    int move_in_year;
+
+    // Tenant move-out date (year = 0 means still staying)
     int move_out_day;
+    int move_out_month;
+    int move_out_year;
+
     bool is_active;
 };
 
@@ -55,24 +63,116 @@ void clearInputBuffer(void)
     }
 }
 
+// Compare two dates: returns -1, 0, or 1
+int compareDates(int year1, int month1, int day1,
+                 int year2, int month2, int day2)
+{
+    if (year1 != year2)
+        return year1 < year2 ? -1 : 1;
+
+    if (month1 != month2)
+        return month1 < month2 ? -1 : 1;
+
+    if (day1 != day2)
+        return day1 < day2 ? -1 : 1;
+
+    return 0;
+}
+
 /* Check if a tenant is currently staying */
-bool isCurrentlyStaying(struct Tenant tenant, int currentDay)
+bool isCurrentlyStaying(struct Tenant tenant,
+                        int currentDay, int currentMonth, int currentYear)
 {
     // Tenant has not moved in yet
-    if (currentDay < tenant.move_in_day)
+    if (compareDates(currentYear, currentMonth, currentDay,
+                     tenant.move_in_year, tenant.move_in_month,
+                     tenant.move_in_day) < 0)
     {
         return false;
     }
 
     // Tenant has already moved out
-    if (tenant.move_out_day != 0 &&
-        currentDay > tenant.move_out_day)
+    if (tenant.move_out_year != 0 &&
+        compareDates(currentYear, currentMonth, currentDay,
+                     tenant.move_out_year, tenant.move_out_month,
+                     tenant.move_out_day) > 0)
     {
         return false;
     }
 
     // Tenant is currently staying
     return true;
+}
+
+// Count tenants currently staying in a room (checks the first 'count' tenants)
+int countOccupants(struct Tenant tenants[], int count, int roomNo,
+                   int currentDay, int currentMonth, int currentYear)
+{
+    int occupants = 0;
+
+    for (int j = 0; j < count; j++)
+    {
+        if (tenants[j].room_no == roomNo &&
+            tenants[j].is_active &&
+            isCurrentlyStaying(tenants[j], currentDay,
+                               currentMonth, currentYear))
+        {
+            occupants++;
+        }
+    }
+
+    return occupants;
+}
+
+// Check if at least one active room still has space
+bool hasAvailableRoom(struct Room rooms[], int roomCount,
+                      struct Tenant tenants[], int tenantsSoFar,
+                      int currentDay, int currentMonth, int currentYear)
+{
+    for (int j = 0; j < roomCount; j++)
+    {
+        if (rooms[j].is_active &&
+            countOccupants(tenants, tenantsSoFar, rooms[j].room_no,
+                           currentDay, currentMonth, currentYear) < rooms[j].capacity)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+// Check whether a date is valid
+bool isValidDate(int day, int month, int year)
+{
+    int daysInMonth;
+
+    if (year < 2000 || month < 1 || month > 12 || day < 1)
+        return false;
+
+    // Set the number of days in the selected month
+    switch (month)
+    {
+    case 2:
+        // Account for leap years
+        daysInMonth = (year % 400 == 0 ||
+                       (year % 4 == 0 && year % 100 != 0))
+                          ? 29
+                          : 28;
+        break;
+
+    case 4:
+    case 6:
+    case 9:
+    case 11:
+        daysInMonth = 30;
+        break;
+
+    default:
+        daysInMonth = 31;
+    }
+
+    return day <= daysInMonth;
 }
 
 int main(void)
@@ -85,20 +185,39 @@ int main(void)
     int startRoom;
     int submeterChoice;
     int currentDay;
+    int currentMonth;
+    int currentYear;
 
-    // Get the current day for occupancy checking
-    printf("Enter current day of the month (1-31): ");
+    // Get the current date for occupancy checking
+    printf("Enter current year: ");
+
+    if (scanf("%d", &currentYear) != 1 || currentYear < 2000)
+    {
+        printf("Invalid current year!\n");
+        return 1;
+    }
+
+    printf("Enter current month (1-12): ");
+
+    if (scanf("%d", &currentMonth) != 1 ||
+        currentMonth < 1 || currentMonth > 12)
+    {
+        printf("Invalid current month!\n");
+        return 1;
+    }
+
+    printf("Enter current day: ");
 
     if (scanf("%d", &currentDay) != 1 ||
-        currentDay < 1 || currentDay > 31)
+        !isValidDate(currentDay, currentMonth, currentYear))
     {
-        printf("Invalid current day!\n");
+        printf("Invalid current date!\n");
         return 1;
     }
     clearInputBuffer();
 
     // Start room registration
-    printf("=== BoardMate: Room Registration ===\n\n");
+    printf("\n=== BoardMate: Room Registration ===\n\n");
     printf("How many rooms do you have? ");
 
     if (scanf("%d", &roomCount) != 1 || roomCount <= 0)
@@ -230,45 +349,158 @@ int main(void)
             return 1;
         }
 
-        printf("Enter move-in day (1-31): ");
-
-        if (scanf("%d", &tenants[i].move_in_day) != 1 ||
-            tenants[i].move_in_day < 1 ||
-            tenants[i].move_in_day > 31)
+        // Get tenant move-in date
+        // Keep asking until the move-in year is valid
+        while (true)
         {
-            printf("Invalid move-in day!\n");
-            free(tenants);
-            free(rooms);
-            return 1;
+            printf("Enter move-in year: ");
+
+            if (scanf("%d", &tenants[i].move_in_year) == 1 &&
+                tenants[i].move_in_year >= 2000)
+            {
+                clearInputBuffer();
+                break; // valid input, leave the loop
+            }
+
+            printf("Invalid move-in year! Try again.\n");
+            clearInputBuffer(); // remove bad input so the loop doesn't repeat forever
         }
-        clearInputBuffer();
 
-        printf("Enter move-out day (0 = still staying): ");
-
-        if (scanf("%d", &tenants[i].move_out_day) != 1 ||
-            tenants[i].move_out_day < 0 ||
-            tenants[i].move_out_day > 31 ||
-            (tenants[i].move_out_day != 0 &&
-             tenants[i].move_out_day < tenants[i].move_in_day))
+        // Keep asking until the move-in month is valid
+        while (true)
         {
-            printf("Invalid move-out day!\n");
-            free(tenants);
-            free(rooms);
-            return 1;
+            printf("Enter move-in month (1-12): ");
+
+            if (scanf("%d", &tenants[i].move_in_month) == 1 &&
+                tenants[i].move_in_month >= 1 &&
+                tenants[i].move_in_month <= 12)
+            {
+                clearInputBuffer();
+                break;
+            }
+
+            printf("Invalid move-in month! Try again.\n");
+            clearInputBuffer();
         }
-        clearInputBuffer();
+
+        // Keep asking until the move-in day is valid for that month and year
+        while (true)
+        {
+            printf("Enter move-in day: ");
+
+            if (scanf("%d", &tenants[i].move_in_day) == 1 &&
+                isValidDate(tenants[i].move_in_day,
+                            tenants[i].move_in_month,
+                            tenants[i].move_in_year))
+            {
+                clearInputBuffer();
+                break;
+            }
+
+            printf("Invalid move-in day! Try again.\n");
+            clearInputBuffer();
+        }
+
+        // Get tenant move-out date
+        // Keep asking until the move-out date is valid and not before move-in
+        while (true)
+        {
+            // Keep asking until the move-out year is valid (0 = still staying)
+            while (true)
+            {
+                printf("Enter move-out year (0 = still staying): ");
+
+                if (scanf("%d", &tenants[i].move_out_year) == 1 &&
+                    (tenants[i].move_out_year == 0 ||
+                     tenants[i].move_out_year >= 2000))
+                {
+                    clearInputBuffer();
+                    break;
+                }
+
+                printf("Invalid move-out year! Try again.\n");
+                clearInputBuffer();
+            }
+
+            // Still staying: clear unused move-out date fields
+            if (tenants[i].move_out_year == 0)
+            {
+                tenants[i].move_out_month = 0;
+                tenants[i].move_out_day = 0;
+                break;
+            }
+
+            // Keep asking until the move-out month is valid
+            while (true)
+            {
+                printf("Enter move-out month (1-12): ");
+
+                if (scanf("%d", &tenants[i].move_out_month) == 1 &&
+                    tenants[i].move_out_month >= 1 &&
+                    tenants[i].move_out_month <= 12)
+                {
+                    clearInputBuffer();
+                    break;
+                }
+
+                printf("Invalid move-out month! Try again.\n");
+                clearInputBuffer();
+            }
+
+            // Keep asking until the move-out day is valid for that month and year
+            while (true)
+            {
+                printf("Enter move-out day: ");
+
+                if (scanf("%d", &tenants[i].move_out_day) == 1 &&
+                    isValidDate(tenants[i].move_out_day,
+                                tenants[i].move_out_month,
+                                tenants[i].move_out_year))
+                {
+                    clearInputBuffer();
+                    break;
+                }
+
+                printf("Invalid move-out day! Try again.\n");
+                clearInputBuffer();
+            }
+
+            // Ensure the move-out date is not before move-in
+            if (compareDates(tenants[i].move_out_year,
+                             tenants[i].move_out_month,
+                             tenants[i].move_out_day,
+                             tenants[i].move_in_year,
+                             tenants[i].move_in_month,
+                             tenants[i].move_in_day) >= 0)
+            {
+                break; // valid move-out date
+            }
+
+            printf("Move-out date cannot be before move-in date! Try again.\n");
+        }
+
+        // Stop if this tenant is staying now and every room is already full
+        if (isCurrentlyStaying(tenants[i], currentDay,
+                               currentMonth, currentYear) &&
+            !hasAvailableRoom(rooms, roomCount, tenants, i,
+                              currentDay, currentMonth, currentYear))
+        {
+            printf("All rooms are full! Cannot register more tenants.\n");
+            tenantCount = i; // keep only the tenants registered so far
+            break;           // leave the tenant registration loop
+        }
 
         // Keep asking until a valid room is selected
         while (true)
         {
             printf("Enter assigned room number: ");
 
+            // Re-ask if the input is not a number
             if (scanf("%d", &roomChoice) != 1)
             {
-                printf("Invalid room number!\n");
-                free(tenants);
-                free(rooms);
-                return 1;
+                printf("Invalid room number! Try again.\n");
+                clearInputBuffer(); // remove bad input so the loop doesn't repeat forever
+                continue;
             }
             clearInputBuffer();
 
@@ -293,13 +525,16 @@ int main(void)
             // Check capacity for tenants who are currently staying
             currentOccupants = 0;
 
-            if (isCurrentlyStaying(tenants[i], currentDay))
+            if (tenants[i].is_active &&
+                isCurrentlyStaying(tenants[i], currentDay,
+                                   currentMonth, currentYear))
             {
                 for (int j = 0; j < i; j++)
                 {
                     if (tenants[j].room_no == roomChoice &&
                         tenants[j].is_active &&
-                        isCurrentlyStaying(tenants[j], currentDay))
+                        isCurrentlyStaying(tenants[j], currentDay,
+                                           currentMonth, currentYear))
                     {
                         currentOccupants++;
                     }
@@ -321,23 +556,46 @@ int main(void)
 
     // Display all registered tenants
     printf("\n=== Registered Tenants ===\n");
-    printf("%-8s %-25s %-10s %-10s %-10s %-20s\n",
+    printf("%-5s %-20s %-6s %-12s %-12s %-18s\n",
            "ID", "Name", "Room", "Move In", "Move Out", "Occupancy");
 
     for (int i = 0; i < tenantCount; i++)
     {
-        // Determine occupancy using the current day
+        // Determine occupancy using the current date
         const char *occupancy;
+        char moveIn[20];
+        char moveOut[20];
+
+        snprintf(moveIn, sizeof(moveIn), "%04d-%02d-%02d",
+                 tenants[i].move_in_year,
+                 tenants[i].move_in_month,
+                 tenants[i].move_in_day);
+
+        if (tenants[i].move_out_year == 0)
+        {
+            snprintf(moveOut, sizeof(moveOut), "Still staying");
+        }
+        else
+        {
+            snprintf(moveOut, sizeof(moveOut), "%04d-%02d-%02d",
+                     tenants[i].move_out_year,
+                     tenants[i].move_out_month,
+                     tenants[i].move_out_day);
+        }
 
         if (!tenants[i].is_active)
         {
             occupancy = "Inactive Record";
         }
-        else if (isCurrentlyStaying(tenants[i], currentDay))
+        else if (isCurrentlyStaying(tenants[i], currentDay,
+                                    currentMonth, currentYear))
         {
             occupancy = "Staying";
         }
-        else if (currentDay < tenants[i].move_in_day)
+        else if (compareDates(currentYear, currentMonth, currentDay,
+                              tenants[i].move_in_year,
+                              tenants[i].move_in_month,
+                              tenants[i].move_in_day) < 0)
         {
             occupancy = "Not Moved In";
         }
@@ -346,12 +604,12 @@ int main(void)
             occupancy = "Moved Out";
         }
 
-        printf("%-8d %-25.25s %-10d %-10d %-10d %-20s\n",
+        printf("%-5d %-20.20s %-6d %-12s %-12s %-18s\n",
                tenants[i].tenant_id,
                tenants[i].name,
                tenants[i].room_no,
-               tenants[i].move_in_day,
-               tenants[i].move_out_day,
+               moveIn,
+               moveOut,
                occupancy);
     }
 
