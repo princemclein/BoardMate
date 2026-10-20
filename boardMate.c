@@ -124,16 +124,64 @@ int countOccupants(struct Tenant tenants[], int count, int roomNo,
     return occupants;
 }
 
-// Check if at least one active room still has space
+// Check if a new tenant fits in a room for their whole stay
+// (checks the first 'count' tenants)
+bool roomHasSpaceForStay(struct Room room, struct Tenant tenants[],
+                         int count, struct Tenant newTenant)
+{
+    // Check on the new tenant's move-in date
+    if (countOccupants(tenants, count, room.room_no,
+                       newTenant.move_in_day, newTenant.move_in_month,
+                       newTenant.move_in_year) >= room.capacity)
+    {
+        return false;
+    }
+
+    // Check on each move-in date that falls during the new tenant's stay
+    for (int j = 0; j < count; j++)
+    {
+        if (tenants[j].room_no != room.room_no || !tenants[j].is_active)
+        {
+            continue;
+        }
+
+        // Skip if this tenant moves in before the new tenant does
+        if (compareDates(tenants[j].move_in_year, tenants[j].move_in_month,
+                         tenants[j].move_in_day, newTenant.move_in_year,
+                         newTenant.move_in_month, newTenant.move_in_day) < 0)
+        {
+            continue;
+        }
+
+        // Skip if this tenant moves in after the new tenant has left
+        if (newTenant.move_out_year != 0 &&
+            compareDates(tenants[j].move_in_year, tenants[j].move_in_month,
+                         tenants[j].move_in_day, newTenant.move_out_year,
+                         newTenant.move_out_month, newTenant.move_out_day) > 0)
+        {
+            continue;
+        }
+
+        if (countOccupants(tenants, count, room.room_no,
+                           tenants[j].move_in_day, tenants[j].move_in_month,
+                           tenants[j].move_in_year) >= room.capacity)
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+// Check if at least one active room has space for the new tenant's stay
 bool hasAvailableRoom(struct Room rooms[], int roomCount,
                       struct Tenant tenants[], int tenantsSoFar,
-                      int currentDay, int currentMonth, int currentYear)
+                      struct Tenant newTenant)
 {
     for (int j = 0; j < roomCount; j++)
     {
         if (rooms[j].is_active &&
-            countOccupants(tenants, tenantsSoFar, rooms[j].room_no,
-                           currentDay, currentMonth, currentYear) < rooms[j].capacity)
+            roomHasSpaceForStay(rooms[j], tenants, tenantsSoFar, newTenant))
         {
             return true;
         }
@@ -175,6 +223,30 @@ bool isValidDate(int day, int month, int year)
     return day <= daysInMonth;
 }
 
+// Save all rooms to rooms.txt, one room per line
+void saveRooms(struct Room rooms[], int roomCount)
+{
+    FILE *fp = fopen("rooms.txt", "w"); // "w" = write (overwrites old file)
+
+    if (fp == NULL)
+    {
+        printf("Could not open rooms.txt for writing!\n");
+        return;
+    }
+
+    for (int i = 0; i < roomCount; i++)
+    {
+        // Format: room_no|capacity|has_submeter|is_active
+        fprintf(fp, "%d|%d|%d|%d\n",
+                rooms[i].room_no,
+                rooms[i].capacity,
+                rooms[i].has_submeter,
+                rooms[i].is_active);
+    }
+
+    fclose(fp); // always close the file so the data is saved
+}
+
 int main(void)
 {
     struct Room *rooms;
@@ -189,32 +261,52 @@ int main(void)
     int currentYear;
 
     // Get the current date for occupancy checking
-    printf("Enter current year: ");
-
-    if (scanf("%d", &currentYear) != 1 || currentYear < 2000)
+    // Keep asking until the current year is valid
+    while (true)
     {
-        printf("Invalid current year!\n");
-        return 1;
+        printf("Enter current year: ");
+
+        if (scanf("%d", &currentYear) == 1 && currentYear >= 2000)
+        {
+            clearInputBuffer();
+            break; // valid input, leave the loop
+        }
+
+        printf("Invalid current year! Try again.\n");
+        clearInputBuffer(); // remove bad input so the loop doesn't repeat forever
     }
 
-    printf("Enter current month (1-12): ");
-
-    if (scanf("%d", &currentMonth) != 1 ||
-        currentMonth < 1 || currentMonth > 12)
+    // Keep asking until the current month is valid
+    while (true)
     {
-        printf("Invalid current month!\n");
-        return 1;
+        printf("Enter current month (1-12): ");
+
+        if (scanf("%d", &currentMonth) == 1 &&
+            currentMonth >= 1 && currentMonth <= 12)
+        {
+            clearInputBuffer();
+            break;
+        }
+
+        printf("Invalid current month! Try again.\n");
+        clearInputBuffer();
     }
 
-    printf("Enter current day: ");
-
-    if (scanf("%d", &currentDay) != 1 ||
-        !isValidDate(currentDay, currentMonth, currentYear))
+    // Keep asking until the current day is valid for that month and year
+    while (true)
     {
-        printf("Invalid current date!\n");
-        return 1;
+        printf("Enter current day: ");
+
+        if (scanf("%d", &currentDay) == 1 &&
+            isValidDate(currentDay, currentMonth, currentYear))
+        {
+            clearInputBuffer();
+            break;
+        }
+
+        printf("Invalid current day! Try again.\n");
+        clearInputBuffer();
     }
-    clearInputBuffer();
 
     // Start room registration
     printf("\n=== BoardMate: Room Registration ===\n\n");
@@ -294,6 +386,9 @@ int main(void)
                rooms[i].is_active ? "Active" : "Inactive");
     }
 
+    saveRooms(rooms, roomCount);
+    printf("Rooms saved to rooms.txt\n");
+
     // Start tenant registration
     printf("\n=== BoardMate: Tenant Registration ===\n\n");
     printf("How many tenants do you want to register? ");
@@ -321,7 +416,6 @@ int main(void)
     {
         int roomChoice;
         int roomIndex;
-        int currentOccupants;
 
         tenants[i].tenant_id = i + 1;
         tenants[i].is_active = true;
@@ -479,13 +573,10 @@ int main(void)
             printf("Move-out date cannot be before move-in date! Try again.\n");
         }
 
-        // Stop if this tenant is staying now and every room is already full
-        if (isCurrentlyStaying(tenants[i], currentDay,
-                               currentMonth, currentYear) &&
-            !hasAvailableRoom(rooms, roomCount, tenants, i,
-                              currentDay, currentMonth, currentYear))
+        // Stop if no room has space for this tenant's stay
+        if (!hasAvailableRoom(rooms, roomCount, tenants, i, tenants[i]))
         {
-            printf("All rooms are full! Cannot register more tenants.\n");
+            printf("All rooms are full for this stay! Cannot register more tenants.\n");
             tenantCount = i; // keep only the tenants registered so far
             break;           // leave the tenant registration loop
         }
@@ -522,29 +613,11 @@ int main(void)
                 continue;
             }
 
-            // Check capacity for tenants who are currently staying
-            currentOccupants = 0;
-
-            if (tenants[i].is_active &&
-                isCurrentlyStaying(tenants[i], currentDay,
-                                   currentMonth, currentYear))
+            // Check the room has space for the whole stay
+            if (!roomHasSpaceForStay(rooms[roomIndex], tenants, i, tenants[i]))
             {
-                for (int j = 0; j < i; j++)
-                {
-                    if (tenants[j].room_no == roomChoice &&
-                        tenants[j].is_active &&
-                        isCurrentlyStaying(tenants[j], currentDay,
-                                           currentMonth, currentYear))
-                    {
-                        currentOccupants++;
-                    }
-                }
-
-                if (currentOccupants >= rooms[roomIndex].capacity)
-                {
-                    printf("Room is full! Choose another room.\n");
-                    continue;
-                }
+                printf("Room is full during this stay! Choose another room.\n");
+                continue;
             }
 
             tenants[i].room_no = roomChoice;
