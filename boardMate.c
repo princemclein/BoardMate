@@ -247,6 +247,36 @@ void saveRooms(struct Room rooms[], int roomCount)
     fclose(fp); // always close the file so the data is saved
 }
 
+// Save all tenants to tenants.txt, one tenant per line
+void saveTenants(struct Tenant tenants[], int tenantCount)
+{
+    FILE *fp = fopen("tenants.txt", "w"); // "w" = write (overwrites old file)
+
+    if (fp == NULL)
+    {
+        printf("Could not open tenants.txt for writing!\n");
+        return;
+    }
+
+    for (int i = 0; i < tenantCount; i++)
+    {
+        // Format: tenant_id|name|room_no|in_year|in_month|in_day|out_year|out_month|out_day|is_active
+        fprintf(fp, "%d|%s|%d|%d|%d|%d|%d|%d|%d|%d\n",
+                tenants[i].tenant_id,
+                tenants[i].name,
+                tenants[i].room_no,
+                tenants[i].move_in_year,
+                tenants[i].move_in_month,
+                tenants[i].move_in_day,
+                tenants[i].move_out_year,
+                tenants[i].move_out_month,
+                tenants[i].move_out_day,
+                tenants[i].is_active);
+    }
+
+    fclose(fp);
+}
+
 int main(void)
 {
     struct Room *rooms;
@@ -685,6 +715,9 @@ int main(void)
                moveOut,
                occupancy);
     }
+
+    saveTenants(tenants, tenantCount);
+    printf("Tenants saved to tenants.txt\n");
 
     // Release allocated memory
     free(tenants);
