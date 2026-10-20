@@ -112,6 +112,61 @@ bool isValidDate(int day, int month, int year)
     return day <= daysInMonth;
 }
 
+// Get the number of days in a month (handles leap years)
+int getDaysInMonth(int month, int year)
+{
+    switch (month)
+    {
+    case 2:
+        return (year % 400 == 0 || (year % 4 == 0 && year % 100 != 0)) ? 29 : 28;
+    case 4:
+    case 6:
+    case 9:
+    case 11:
+        return 30;
+    default:
+        return 31;
+    }
+}
+
+// Count how many days a tenant stayed in the given month (both ends count)
+int tenantDaysInMonth(struct Tenant t, int month, int year)
+{
+    int daysInMonth = getDaysInMonth(month, year);
+    int startDay;
+    int endDay;
+
+    // Moved in after the month ended
+    if (compareDates(t.move_in_year, t.move_in_month, t.move_in_day,
+                     year, month, daysInMonth) > 0)
+    {
+        return 0;
+    }
+
+    // Moved out before the month started
+    if (t.move_out_year != 0 &&
+        compareDates(t.move_out_year, t.move_out_month, t.move_out_day,
+                     year, month, 1) < 0)
+    {
+        return 0;
+    }
+
+    // Moved in before this month: counts from day 1
+    startDay = (compareDates(t.move_in_year, t.move_in_month, t.move_in_day,
+                             year, month, 1) < 0)
+                   ? 1
+                   : t.move_in_day;
+
+    // Still staying or moves out after this month: counts until the last day
+    endDay = (t.move_out_year == 0 ||
+              compareDates(t.move_out_year, t.move_out_month, t.move_out_day,
+                           year, month, daysInMonth) > 0)
+                 ? daysInMonth
+                 : t.move_out_day;
+
+    return endDay - startDay + 1;
+}
+
 // Ask for a whole number between min and max, and keep asking until it is valid
 int readInt(const char *prompt, const char *name, int min, int max)
 {
@@ -724,6 +779,15 @@ int main(void)
     free(rooms);
 
     printf("\nRoom and tenant registration completed!\n");
+
+    // TEMP TEST: person-days of each tenant for the current month
+    for (int i = 0; i < tenantCount; i++)
+    {
+        printf("%s: %d day(s) in %d-%02d\n",
+               tenants[i].name,
+               tenantDaysInMonth(tenants[i], currentMonth, currentYear),
+               currentYear, currentMonth);
+    }
 
     return 0;
 }
