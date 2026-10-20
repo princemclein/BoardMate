@@ -1,153 +1,313 @@
 
 #include <stdio.h>
 #include <stdbool.h>
-#include <stdlib.h> // Provides memory functions like malloc() and free()
+#include <stdlib.h>
+#include <string.h>
+#include <limits.h>
 
-// Stores information about each room in the boarding house
+// Stores information about each room
 struct Room
 {
-    int room_no;       // Unique room number
-    int capacity;      // Maximum number of tenants allowed in the room
-    bool has_submeter; // True if the room has its own electricity submeter
-    bool is_active;    // True if the room is currently active
+    int room_no;
+    int capacity;
+    bool has_submeter;
+    bool is_active;
 };
 
 // Stores information about each tenant
 struct Tenant
 {
-    int tenant_id;    // Unique identification number of the tenant
-    char name[50];    // Tenant's name, up to 49 characters plus the null terminator
-    int room_no;      // Room assigned to the tenant
-    int move_in_day;  // Day of the month the tenant moved in
-    int move_out_day; // Day the tenant moved out; 0 means still staying
-    bool is_active;   // True if the tenant's record is active
+    int tenant_id;
+    char name[50];
+    int room_no;
+    int move_in_day;
+    int move_out_day;
+    bool is_active;
 };
 
-// Records overnight guest stays for a particular room and month
+// Records overnight guest stays
 struct GuestLog
 {
-    int room_no;      // Room where the guest stayed
-    int month;        // Month of the guest stay
-    int year;         // Year of the guest stay
-    int guest_nights; // Total overnight guest stays recorded for the room
+    int room_no;
+    int month;
+    int year;
+    int guest_nights;
 };
 
-// Stores the information needed for a monthly utility bill
+// Stores monthly utility bill information
 struct MonthlyBill
 {
-    int month;                  // Month covered by the bill
-    int year;                   // Year covered by the bill
-    int days_in_month;          // Number of days in the billing month (28–31)
-    double total_kwh;           // Total electricity consumption of the whole house
-    double total_water_amount;  // Total water bill in pesos
-    double fixed_charge_amount; // Shared fixed charges, such as water pump electricity
+    int month;
+    int year;
+    int days_in_month;
+    double total_kwh;
+    double total_water_amount;
+    double fixed_charge_amount;
 };
+
+// Removes leftover characters from the input buffer
+void clearInputBuffer(void)
+{
+    int ch;
+
+    while ((ch = getchar()) != '\n' && ch != EOF)
+    {
+    }
+}
 
 int main(void)
 {
-    struct Room *rooms; // Pointer to the dynamically allocated array of rooms
-    int roomCount;      // Number of rooms to register
-    int startRoom;      // Room number assigned to the first room
-    int submeterChoice; // Stores the user's submeter answer (1 = Yes, 0 = No)
+    struct Room *rooms;
+    struct Tenant *tenants;
 
-    // Display the program title
+    int roomCount;
+    int tenantCount;
+    int startRoom;
+    int submeterChoice;
+
+    // Start room registration
     printf("=== BoardMate: Room Registration ===\n\n");
-
-    // Ask how many rooms the boarding house has
     printf("How many rooms do you have? ");
 
-    // Validate the input and reject zero or negative room counts
     if (scanf("%d", &roomCount) != 1 || roomCount <= 0)
     {
         printf("Invalid room count!\n");
-        return 1; // Stop the program because the input is invalid
+        return 1;
     }
+    clearInputBuffer();
 
-    // Allocate enough memory to store all room records
+    // Allocate memory for room records
     rooms = malloc((size_t)roomCount * sizeof(struct Room));
 
-    // Check whether memory allocation was successful
     if (rooms == NULL)
     {
         printf("Memory allocation failed!\n");
         return 1;
     }
 
-    // Ask for the number of the first room
     printf("Enter starting room number: ");
 
-    // Validate the starting number and prevent integer overflow
-    // when generating the remaining sequential room numbers
     if (scanf("%d", &startRoom) != 1 ||
         startRoom <= 0 ||
-        startRoom > 2147483647 - (roomCount - 1))
+        startRoom > INT_MAX - (roomCount - 1))
     {
         printf("Invalid starting room number!\n");
-        free(rooms); // Release the allocated memory before exiting
+        free(rooms);
         return 1;
     }
+    clearInputBuffer();
 
-    // Register each room using a loop
+    // Register each room
     for (int i = 0; i < roomCount; i++)
     {
-        // Generate consecutive room numbers automatically
         rooms[i].room_no = startRoom + i;
-
-        // Mark newly registered rooms as active
         rooms[i].is_active = true;
 
-        // Ask for the maximum number of tenants allowed in the room
         printf("\nRoom %d\n", rooms[i].room_no);
         printf("Enter room capacity: ");
 
-        // Reject invalid input or a capacity of zero or less
         if (scanf("%d", &rooms[i].capacity) != 1 ||
             rooms[i].capacity <= 0)
         {
             printf("Invalid room capacity!\n");
-            free(rooms); // Release memory before exiting
+            free(rooms);
             return 1;
         }
+        clearInputBuffer();
 
-        // Ask whether the room has its own electricity submeter
         printf("Does this room have an electricity submeter? (1 = Yes, 0 = No): ");
 
-        // Accept only 1 or 0 as a valid answer
         if (scanf("%d", &submeterChoice) != 1 ||
             (submeterChoice != 0 && submeterChoice != 1))
         {
             printf("Invalid submeter choice!\n");
-            free(rooms); // Release memory before exiting
+            free(rooms);
             return 1;
         }
+        clearInputBuffer();
 
-        // Convert the numeric answer into a Boolean value
-        // 1 becomes true; 0 becomes false
         rooms[i].has_submeter = (submeterChoice == 1);
     }
 
-    // Display the heading for the registered room records
+    // Display registered rooms
     printf("\n=== Registered Rooms ===\n");
-
-    // Print the column headings using aligned text
     printf("%-10s %-10s %-15s %-10s\n",
            "Room No.", "Capacity", "Submeter", "Status");
 
-    // Display the details of every registered room
     for (int i = 0; i < roomCount; i++)
     {
         printf("%-10d %-10d %-15s %-10s\n",
-               rooms[i].room_no,                            // Display the room number
-               rooms[i].capacity,                           // Display the room capacity
-               rooms[i].has_submeter ? "Yes" : "No",        // Convert Boolean to readable text
-               rooms[i].is_active ? "Active" : "Inactive"); // Display room status
+               rooms[i].room_no,
+               rooms[i].capacity,
+               rooms[i].has_submeter ? "Yes" : "No",
+               rooms[i].is_active ? "Active" : "Inactive");
     }
 
-    // Release the dynamically allocated memory
+    // Start tenant registration
+    printf("\n=== BoardMate: Tenant Registration ===\n\n");
+    printf("How many tenants do you want to register? ");
+
+    if (scanf("%d", &tenantCount) != 1 || tenantCount <= 0)
+    {
+        printf("Invalid tenant count!\n");
+        free(rooms);
+        return 1;
+    }
+    clearInputBuffer();
+
+    // Allocate memory for tenant records
+    tenants = malloc((size_t)tenantCount * sizeof(struct Tenant));
+
+    if (tenants == NULL)
+    {
+        printf("Memory allocation failed!\n");
+        free(rooms);
+        return 1;
+    }
+
+    // Register each tenant
+    for (int i = 0; i < tenantCount; i++)
+    {
+        int roomChoice;
+        int roomIndex;
+        int currentOccupants;
+
+        tenants[i].tenant_id = i + 1;
+        tenants[i].is_active = true;
+
+        printf("\nTenant ID: %d\n", tenants[i].tenant_id);
+        printf("Enter tenant name: ");
+
+        // Read a name that can contain spaces
+        if (fgets(tenants[i].name, sizeof(tenants[i].name), stdin) == NULL)
+        {
+            printf("Failed to read tenant name!\n");
+            free(tenants);
+            free(rooms);
+            return 1;
+        }
+
+        // Remove the newline from the name
+        tenants[i].name[strcspn(tenants[i].name, "\n")] = '\0';
+
+        if (tenants[i].name[0] == '\0')
+        {
+            printf("Tenant name cannot be empty!\n");
+            free(tenants);
+            free(rooms);
+            return 1;
+        }
+
+        printf("Enter move-in day (1-31): ");
+
+        if (scanf("%d", &tenants[i].move_in_day) != 1 ||
+            tenants[i].move_in_day < 1 ||
+            tenants[i].move_in_day > 31)
+        {
+            printf("Invalid move-in day!\n");
+            free(tenants);
+            free(rooms);
+            return 1;
+        }
+        clearInputBuffer();
+
+        printf("Enter move-out day (0 = still staying): ");
+
+        if (scanf("%d", &tenants[i].move_out_day) != 1 ||
+            tenants[i].move_out_day < 0 ||
+            tenants[i].move_out_day > 31 ||
+            (tenants[i].move_out_day != 0 &&
+             tenants[i].move_out_day < tenants[i].move_in_day))
+        {
+            printf("Invalid move-out day!\n");
+            free(tenants);
+            free(rooms);
+            return 1;
+        }
+        clearInputBuffer();
+
+        // Keep asking until a valid room is selected
+        while (true)
+        {
+            printf("Enter assigned room number: ");
+
+            if (scanf("%d", &roomChoice) != 1)
+            {
+                printf("Invalid room number!\n");
+                free(tenants);
+                free(rooms);
+                return 1;
+            }
+            clearInputBuffer();
+
+            // Find the selected room
+            roomIndex = -1;
+
+            for (int j = 0; j < roomCount; j++)
+            {
+                if (rooms[j].room_no == roomChoice)
+                {
+                    roomIndex = j;
+                    break;
+                }
+            }
+
+            if (roomIndex == -1 || !rooms[roomIndex].is_active)
+            {
+                printf("Room does not exist or is inactive. Try again.\n");
+                continue;
+            }
+
+            // Check capacity for tenants who are still staying
+            currentOccupants = 0;
+
+            if (tenants[i].move_out_day == 0)
+            {
+                for (int j = 0; j < i; j++)
+                {
+                    if (tenants[j].room_no == roomChoice &&
+                        tenants[j].is_active &&
+                        tenants[j].move_out_day == 0)
+                    {
+                        currentOccupants++;
+                    }
+                }
+
+                if (currentOccupants >= rooms[roomIndex].capacity)
+                {
+                    printf("Room is full! Choose another room.\n");
+                    continue;
+                }
+            }
+
+            tenants[i].room_no = roomChoice;
+            break;
+        }
+
+        printf("Tenant registered successfully!\n");
+    }
+
+    // Display all registered tenants
+    printf("\n=== Registered Tenants ===\n");
+    printf("%-8s %-25s %-10s %-10s %-10s %-10s\n",
+           "ID", "Name", "Room", "Move In", "Move Out", "Status");
+
+    for (int i = 0; i < tenantCount; i++)
+    {
+        printf("%-8d %-25.25s %-10d %-10d %-10d %-10s\n",
+               tenants[i].tenant_id,
+               tenants[i].name,
+               tenants[i].room_no,
+               tenants[i].move_in_day,
+               tenants[i].move_out_day,
+               tenants[i].is_active ? "Active" : "Inactive");
+    }
+
+    // Release allocated memory
+    free(tenants);
     free(rooms);
 
-    // Inform the user that registration has finished
-    printf("\nRoom registration completed!\n");
+    printf("\nRoom and tenant registration completed!\n");
 
-    return 0; // End the program successfully
+    return 0;
 }
