@@ -277,6 +277,112 @@ void saveTenants(struct Tenant tenants[], int tenantCount)
     fclose(fp);
 }
 
+// Load rooms from rooms.txt, returns how many were loaded (0 if no file yet)
+int loadRooms(struct Room **rooms)
+{
+    FILE *fp = fopen("rooms.txt", "r"); // "r" = read
+    char line[200];
+    int count = 0;
+
+    *rooms = NULL;
+
+    // No file yet (first run), so there is nothing to load
+    if (fp == NULL)
+    {
+        return 0;
+    }
+
+    while (fgets(line, sizeof(line), fp) != NULL)
+    {
+        struct Room room;
+        int hasSubmeter;
+        int isActive;
+
+        // Split the line by '|' into the fields
+        if (sscanf(line, "%d|%d|%d|%d",
+                   &room.room_no,
+                   &room.capacity,
+                   &hasSubmeter,
+                   &isActive) != 4)
+        {
+            continue; // skip a broken line
+        }
+
+        room.has_submeter = (hasSubmeter == 1);
+        room.is_active = (isActive == 1);
+
+        // Grow the array by one room
+        struct Room *temp = realloc(*rooms, (size_t)(count + 1) * sizeof(struct Room));
+
+        if (temp == NULL)
+        {
+            printf("Memory allocation failed!\n");
+            break;
+        }
+
+        *rooms = temp;
+        (*rooms)[count] = room;
+        count++;
+    }
+
+    fclose(fp);
+    return count;
+}
+
+// Load tenants from tenants.txt, returns how many were loaded (0 if no file yet)
+int loadTenants(struct Tenant **tenants)
+{
+    FILE *fp = fopen("tenants.txt", "r");
+    char line[300];
+    int count = 0;
+
+    *tenants = NULL;
+
+    if (fp == NULL)
+    {
+        return 0;
+    }
+
+    while (fgets(line, sizeof(line), fp) != NULL)
+    {
+        struct Tenant tenant;
+        int isActive;
+
+        // %49[^|] reads the name (spaces allowed) until the next '|'
+        if (sscanf(line, "%d|%49[^|]|%d|%d|%d|%d|%d|%d|%d|%d",
+                   &tenant.tenant_id,
+                   tenant.name,
+                   &tenant.room_no,
+                   &tenant.move_in_year,
+                   &tenant.move_in_month,
+                   &tenant.move_in_day,
+                   &tenant.move_out_year,
+                   &tenant.move_out_month,
+                   &tenant.move_out_day,
+                   &isActive) != 10)
+        {
+            continue; // skip a broken line
+        }
+
+        tenant.is_active = (isActive == 1);
+
+        struct Tenant *temp = realloc(*tenants, (size_t)(count + 1) * sizeof(struct Tenant));
+
+        if (temp == NULL)
+        {
+            printf("Memory allocation failed!\n");
+            break;
+        }
+
+        *tenants = temp;
+        (*tenants)[count] = tenant;
+        count++;
+    }
+
+    fclose(fp);
+    return count;
+}
+
 int main(void)
 {
     struct Room *rooms;
@@ -337,6 +443,18 @@ int main(void)
         printf("Invalid current day! Try again.\n");
         clearInputBuffer();
     }
+
+    // TEMP TEST: load saved data and show the counts
+    struct Room *savedRooms;
+    struct Tenant *savedTenants;
+    int savedRoomCount = loadRooms(&savedRooms);
+    int savedTenantCount = loadTenants(&savedTenants);
+
+    printf("Loaded %d room(s) and %d tenant(s) from files.\n",
+           savedRoomCount, savedTenantCount);
+
+    free(savedRooms);
+    free(savedTenants);
 
     // Start room registration
     printf("\n=== BoardMate: Room Registration ===\n\n");
